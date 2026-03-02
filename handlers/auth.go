@@ -24,13 +24,17 @@ func Login(c *fiber.Ctx) error {
 	}
 
 	if req.Username == "" || req.Password == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"message": "username and password are required",
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "username and password are required",
 		})
 	}
 
-	// Simple auth: accept any non-empty username/password
+	// Validate credentials
+	if req.Username != "admin" || req.Password != "password" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "invalid credentials",
+		})
+	}
 	cfg := config.Load()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"username": req.Username,
