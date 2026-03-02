@@ -3,7 +3,6 @@ package handlers
 import (
 	"desent-pretest/database"
 	"desent-pretest/models"
-	"math"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -26,22 +25,19 @@ func CreateBook(c *fiber.Ctx) error {
 	var req CreateBookRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"message": "invalid request body",
+			"error": "invalid request body",
 		})
 	}
 
 	// Level 7: Validation
 	if req.Title == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"message": "title is required",
+			"error": "title is required",
 		})
 	}
 	if req.Author == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"message": "author is required",
+			"error": "author is required",
 		})
 	}
 
@@ -53,15 +49,11 @@ func CreateBook(c *fiber.Ctx) error {
 
 	if err := database.DB.Create(&book).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"success": false,
-			"message": "failed to create book",
+			"error": "failed to create book",
 		})
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"success": true,
-		"data":    book,
-	})
+	return c.Status(fiber.StatusCreated).JSON(book)
 }
 
 // Level 3: Get All Books (with Level 6: Search & Paginate)
@@ -84,44 +76,17 @@ func GetBooks(c *fiber.Ctx) error {
 	limit, _ := strconv.Atoi(c.Query("limit", "0"))
 
 	if page > 0 && limit > 0 {
-		var total int64
-		query.Count(&total)
-
 		offset := (page - 1) * limit
 		query = query.Offset(offset).Limit(limit)
-
-		if err := query.Order("id ASC").Find(&books).Error; err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"success": false,
-				"message": "failed to fetch books",
-			})
-		}
-
-		totalPages := int(math.Ceil(float64(total) / float64(limit)))
-
-		return c.JSON(fiber.Map{
-			"success": true,
-			"data":    books,
-			"meta": fiber.Map{
-				"page":        page,
-				"limit":       limit,
-				"total":       total,
-				"total_pages": totalPages,
-			},
-		})
 	}
 
 	if err := query.Order("id ASC").Find(&books).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"success": false,
-			"message": "failed to fetch books",
+			"error": "failed to fetch books",
 		})
 	}
 
-	return c.JSON(fiber.Map{
-		"success": true,
-		"data":    books,
-	})
+	return c.JSON(books)
 }
 
 // Level 3: Get Book by ID
@@ -132,15 +97,11 @@ func GetBook(c *fiber.Ctx) error {
 	if err := database.DB.First(&book, id).Error; err != nil {
 		// Level 7: Not found
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"success": false,
-			"message": "book not found",
+			"error": "book not found",
 		})
 	}
 
-	return c.JSON(fiber.Map{
-		"success": true,
-		"data":    book,
-	})
+	return c.JSON(book)
 }
 
 // Level 4: Update Book
@@ -150,16 +111,14 @@ func UpdateBook(c *fiber.Ctx) error {
 	var book models.Book
 	if err := database.DB.First(&book, id).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"success": false,
-			"message": "book not found",
+			"error": "book not found",
 		})
 	}
 
 	var req UpdateBookRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"message": "invalid request body",
+			"error": "invalid request body",
 		})
 	}
 
@@ -175,15 +134,11 @@ func UpdateBook(c *fiber.Ctx) error {
 
 	if err := database.DB.Save(&book).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"success": false,
-			"message": "failed to update book",
+			"error": "failed to update book",
 		})
 	}
 
-	return c.JSON(fiber.Map{
-		"success": true,
-		"data":    book,
-	})
+	return c.JSON(book)
 }
 
 // Level 4: Delete Book
@@ -193,20 +148,15 @@ func DeleteBook(c *fiber.Ctx) error {
 	var book models.Book
 	if err := database.DB.First(&book, id).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"success": false,
-			"message": "book not found",
+			"error": "book not found",
 		})
 	}
 
 	if err := database.DB.Delete(&book).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"success": false,
-			"message": "failed to delete book",
+			"error": "failed to delete book",
 		})
 	}
 
-	return c.JSON(fiber.Map{
-		"success": true,
-		"message": "book deleted successfully",
-	})
+	return c.SendStatus(fiber.StatusNoContent)
 }
